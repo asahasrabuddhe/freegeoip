@@ -6,6 +6,7 @@ package apiserver
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -63,6 +64,11 @@ type Config struct {
 
 // NewConfig creates and initializes a new Config with default values.
 func NewConfig() *Config {
+	licenseKey := os.Getenv("MAXMIND_LICENSE_KEY")
+	if licenseKey == "" {
+		log.Fatal("[error] maxmind license key not set")
+	}
+
 	return &Config{
 		FastOpen:            false,
 		Naggle:              false,
@@ -79,7 +85,7 @@ func NewConfig() *Config {
 		CORSOrigin:          "*",
 		ReadTimeout:         30 * time.Second,
 		WriteTimeout:        15 * time.Second,
-		DB:                  freegeoip.MaxMindDB,
+		DB:                  fmt.Sprintf(freegeoip.MaxMindDB, licenseKey),
 		UpdateInterval:      24 * time.Hour,
 		RetryInterval:       2 * time.Hour,
 		LogTimestamp:        true,

@@ -5,6 +5,7 @@
 package freegeoip
 
 import (
+	"archive/tar"
 	"compress/gzip"
 	"crypto/md5"
 	"encoding/hex"
@@ -18,6 +19,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -35,7 +37,7 @@ var (
 	defaultDB = filepath.Join(os.TempDir(), "freegeoip", "db.gz")
 
 	// MaxMindDB is the URL of the free MaxMind GeoLite2 database.
-	MaxMindDB = "http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz"
+	MaxMindDB = "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&date=20200107&license_key=%s&suffix=tar.gz"
 )
 
 // DB is the IP geolocation database.
@@ -196,18 +198,31 @@ func (db *DB) newReader(dbfile string) (*maxminddb.Reader, string, error) {
 		return nil, "", err
 	}
 	defer f.Close()
+
 	gzf, err := gzip.NewReader(f)
 	if err != nil {
 		return nil, "", err
 	}
 	defer gzf.Close()
-	b, err := ioutil.ReadAll(gzf)
-	if err != nil {
-		return nil, "", err
+
+	tarReader := tar.NewReader(gzf)
+
+	for {
+		header, err := tarReader.Next()
+		if err != nil {
+			return nil, "", err
+		}
+
+		if header.Typeflag == tar.TypeReg && strings.HasSuffix(header.Name, "mmdb") {
+			b, err := ioutil.ReadAll(tarReader)
+			if err != nil {
+				return nil, "", err
+			}
+			checksum := fmt.Sprintf("%x", md5.Sum(b))
+			mmdb, err := maxminddb.FromBytes(b)
+			return mmdb, checksum, err
+		}
 	}
-	checksum := fmt.Sprintf("%x", md5.Sum(b))
-	mmdb, err := maxminddb.FromBytes(b)
-	return mmdb, checksum, err
 }
 
 func (db *DB) setReader(reader *maxminddb.Reader, modtime time.Time, checksum string) {
