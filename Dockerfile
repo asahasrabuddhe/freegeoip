@@ -18,7 +18,7 @@ COPY --from=builder --chown=freegeoip:freegeoip /go/bin/freegeoip /usr/bin/freeg
 
 USER freegeoip
 
-ENTRYPOINT ["/usr/bin/freegeoip"]
+ENTRYPOINT ["/usr/bin/freegeoip", "-use-x-forwarded-for"]
 
 EXPOSE 8080
 
