@@ -1,18 +1,24 @@
-FROM golang:1.9
+FROM golang:1.13-alpine AS builder
+
+WORKDIR /go/src/freegeoip
+
+COPY . .
+
+RUN CGO_ENABLED=0 go build -o /go/bin/freegeoip cmd/freegeoip/main.go
+
+FROM alpine:3.10
+
+RUN apk add --no-cache git libcap shadow \
+	&& addgroup -g 1000 -S freegeoip \
+	&& adduser -u 1000 -S freegeoip -G freegeoip
 
 COPY cmd/freegeoip/public /var/www
 
-ADD . /go/src/github.com/apilayer/freegeoip
-RUN \
-	cd /go/src/github.com/apilayer/freegeoip/cmd/freegeoip && \
-	go get -d && go install && \
-	apt-get update && apt-get install -y libcap2-bin && \
-	setcap cap_net_bind_service=+ep /go/bin/freegeoip && \
-	apt-get clean && rm -rf /var/lib/apt/lists/* && \
-	useradd -ms /bin/bash freegeoip
+COPY --from=builder --chown=freegeoip:freegeoip /go/bin/freegeoip /usr/bin/freegeoip
 
 USER freegeoip
-ENTRYPOINT ["/go/bin/freegeoip"]
+
+ENTRYPOINT ["/usr/bin/freegeoip"]
 
 EXPOSE 8080
 
