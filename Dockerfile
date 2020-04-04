@@ -16,11 +16,16 @@ COPY cmd/freegeoip/public /var/www
 
 COPY --from=builder --chown=freegeoip:freegeoip /go/bin/freegeoip /usr/bin/freegeoip
 
+ARG INITIAL_DATABASE_URL
+ENV INITIAL_DATABASE_URL=${INITIAL_DATABASE_URL}
+
 USER freegeoip
 
 ENTRYPOINT ["/usr/bin/freegeoip", "-use-x-forwarded-for"]
 
 EXPOSE 8080
+
+ENV QUOTA_MAX=0
 
 # CMD instructions:
 # Add  "-use-x-forwarded-for"      if your server is behind a reverse proxy

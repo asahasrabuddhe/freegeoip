@@ -37,7 +37,8 @@ var (
 	defaultDB = filepath.Join(os.TempDir(), "freegeoip", "db.gz")
 
 	// MaxMindDB is the URL of the free MaxMind GeoLite2 database.
-	MaxMindDB = "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&date=20200107&license_key=%s&suffix=tar.gz"
+	//MaxMindDB = "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&date=20200107&license_key=%s&suffix=tar.gz"
+	MaxMindDB = os.Getenv("INITIAL_DATABASE_URL")
 )
 
 // DB is the IP geolocation database.
@@ -209,11 +210,19 @@ func (db *DB) newReader(dbfile string) (*maxminddb.Reader, string, error) {
 
 	for {
 		header, err := tarReader.Next()
-		if err != nil {
+
+		if err == io.EOF {
 			return nil, "", err
 		}
 
-		if header.Typeflag == tar.TypeReg && strings.HasSuffix(header.Name, "mmdb") {
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		name := header.Name
+
+		if (header.Typeflag == tar.TypeReg && strings.HasSuffix(name, "mmdb")) {
 			b, err := ioutil.ReadAll(tarReader)
 			if err != nil {
 				return nil, "", err
@@ -324,6 +333,7 @@ func (db *DB) download(url string) (tmpfile string, err error) {
 		return "", err
 	}
 	defer f.Close()
+
 	_, err = io.Copy(f, resp.Body)
 	if err != nil {
 		return "", err
