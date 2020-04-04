@@ -1,5 +1,4 @@
 # GeoIP
->>>>>>> b9f2818eb67f54703c99fc6bbfd6e12a1d3f6491
 
 This service is based on the original [Apilayer's Freegeoip project](https://github.com/apilayer/freegeoip), with a little modifications.
 
@@ -54,70 +53,3 @@ However, before it can serve any request, `NewHandler` turns out will also attem
 Once `OpenURL` is called, an `autoUpdate` function will kick in automatically in the background using a goroutine (similar to a Ruby's thread but lightweight). It will check if a newer database exist by checking the `X-Database-MD5` and the file's size.
 
 As we might already guess, there are two kinds of database: the paid version and the free version. If we run the service without the paid license, it will never send a request to download the paid version of the database.
-
-## Deployment: Fargate
-
-In the AWS world, there are many kind of deployment services that one can use to deploy app into it:
-
-- [EC2](https://aws.amazon.com/ec2/): the bare metal
-- [AWS Elastic Beanstalk](https://aws.amazon.com/elasticbeanstalk/): easy to use code deployment service somewhat trying to replicate Heroku, with 'but'
-- [EKS Elastic Container Service for Kubernetes](https://aws.amazon.com/eks/): Kube-style container-orchestrated deployment. Pretty expensive.
-- [ECS Elastic Container Service](https://aws.amazon.com/ecs/): AWS own's answer of container-orchestrated deployment. Not expensive.
-- [Fargate](https://aws.amazon.com/fargate/): Disregarding the concept of region and zone, this container-based deployment only ask us about what kind of CPU and Memory do we want, and deploy it to either ECS or EKS-manner (EKS not yet supported as of August 2018). Far so easy to deploy at.
-
-Here is the step by step of deployment to AWS Fargate:
-
-- Install Python
-- Install awscli
-
-```
-$ pip install awscli
-```
-
-- [Configure awscli](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html): require ACCESS KEY ID of your user account for it to be usable.
-- Login to ECR:
-
-```
-$ $(aws ecr get-login --no-include-email --region ap-northeast-1)
-```
-
-- Obtain the Maxmind license key by signing up with a free account: https://www.maxmind.com/en/geolite2/signup
-
-- Build the docker image:
-Replace `LICENSE_KEY` with the license key you have from your Maxmind account
-
-```
-$ docker build . -t vgeoip:latest --build-arg INITIAL_DATABASE_URL="https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&suffix=tar.gz&license_key=LICENSE_KEY"
-```
-
-To see list of available images:
-
-```
-$ docker images
-```
-
-- Construct the docker registry address for AWS:
-
-  - [Find out your account ID](https://console.aws.amazon.com/billing/home?#/account) eg: 607558961840
-  - [Determine the region ID](https://docs.aws.amazon.com/general/latest/gr/rande.html), eg: ap-northeast-1 for Tokyo
-
-  Your constructed registry address: 607558961840.dkr.ecr. ap-northeast-1.amazonaws.com
-  
-- Tag the image with ECR repository tag:
-
-```
-$ docker tag vgeoip:latest 607558961840.dkr.ecr.ap-northeast-1.amazonaws.com/vgeoip:latest
-```
-
-- Push the tagged image to ECR
-
-  - Ensure the repository (eg: `vgeoip`) is already [created beforehand](https://us-west-2.console.aws.amazon.com/ecs/home?region=us-west-2#/repositories). Click create repository on that page if haven't. Ensure Repository URI matches your ID and your region properly.
-  - Push:
-
-  ```
-  $ docker push 607558961840.dkr.ecr.ap-northeast-1.amazonaws.com/vgeoip:latest
-  ```
-
-## Deployment: Heroku
-Add ENV `INITIAL_DATABASE_URL` with "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&suffix=tar.gz&license_key=LICENSE_KEY"
-where LICENSE_KEY is the Maxmind license key after signing up a free account: https://www.maxmind.com/en/geolite2/signup
