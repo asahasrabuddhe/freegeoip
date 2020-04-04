@@ -186,6 +186,7 @@ func (f *apiHandler) iplookup(writer writerFunc) http.HandlerFunc {
 		err = f.db.Lookup(ip, &q.DefaultQuery)
 		if err != nil {
 			f.conf.errorLogger().Println(err)
+			log.Println("[Error] => ", err)
 			http.Error(w, "Try again later.", http.StatusServiceUnavailable)
 			return
 		}
